@@ -5,36 +5,33 @@ const router = express.Router();
 
 const cartsFilePath = path.join(__dirname, '../data/carrito.json');
 
-
 const readCarts = () => {
     const data = fs.readFileSync(cartsFilePath, 'utf-8');
     return JSON.parse(data);
 };
 
-
 const writeCarts = (carts) => {
     fs.writeFileSync(cartsFilePath, JSON.stringify(carts, null, 2));
 };
-
 
 router.get('/', (req, res) => {
     const carts = readCarts();
     res.json(carts);
 });
 
-
 router.get('/:cid', (req, res) => {
     const carts = readCarts();
     const cartId = parseInt(req.params.cid);
-    const cart = carts.find(c => c.id === cartId);
+    let cart = carts.find(c => c.id === cartId);
 
-    if (cart) {
-        res.json(cart.products);
-    } else {
-        res.status(404).send('Cart not found');
+    if (!cart) {
+        cart = { id: cartId, products: [] };
+        carts.push(cart);
+        writeCarts(carts);
     }
-});
 
+    res.json(cart.products);
+});
 
 router.post('/', (req, res) => {
     const carts = readCarts();
@@ -48,7 +45,6 @@ router.post('/', (req, res) => {
     res.status(201).json(newCart);
 });
 
-
 router.post('/:cid/product/:pid', (req, res) => {
     const carts = readCarts();
     const cartId = parseInt(req.params.cid);
@@ -58,10 +54,8 @@ router.post('/:cid/product/:pid', (req, res) => {
     if (cart) {
         const productIndex = cart.products.findIndex(p => p.product === productId);
         if (productIndex !== -1) {
-      
             cart.products[productIndex].quantity += 1;
         } else {
-         
             cart.products.push({ product: productId, quantity: 1 });
         }
         writeCarts(carts);
