@@ -5,18 +5,16 @@ const router = express.Router();
 
 const productsFilePath = path.join(__dirname, '../data/productos.json');
 
-// Leer productos del archivo
 const readProducts = () => {
     const data = fs.readFileSync(productsFilePath, 'utf-8');
     return JSON.parse(data);
 };
 
-// Escribir productos en el archivo
 const writeProducts = (products) => {
     fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2));
 };
 
-// Obtener todos los productos, con limitación opcional
+
 router.get('/', (req, res) => {
     const products = readProducts();
     const limit = parseInt(req.query.limit);
@@ -28,7 +26,6 @@ router.get('/', (req, res) => {
     }
 });
 
-// Obtener un producto por ID
 router.get('/:pid', (req, res) => {
     const products = readProducts();
     const productId = parseInt(req.params.pid);
@@ -41,17 +38,16 @@ router.get('/:pid', (req, res) => {
     }
 });
 
-// Crear un nuevo producto
+
 router.post('/', (req, res) => {
     const products = readProducts();
     const { title, description, code, price, stock, category, thumbnails } = req.body;
 
-    // Validar campos obligatorios
     if (!title || !description || !code || !price || !stock || !category) {
         return res.status(400).send('All fields except thumbnails are required');
     }
 
-    // Crear un nuevo producto con ID autogenerado
+
     const newProduct = {
         id: products.length > 0 ? products[products.length - 1].id + 1 : 1,
         title,
@@ -69,7 +65,6 @@ router.post('/', (req, res) => {
     res.status(201).json(newProduct);
 });
 
-// Actualizar un producto por ID
 router.put('/:pid', (req, res) => {
     const products = readProducts();
     const productId = parseInt(req.params.pid);
@@ -77,7 +72,7 @@ router.put('/:pid', (req, res) => {
 
     if (productIndex !== -1) {
         const updatedProduct = { ...products[productIndex], ...req.body };
-        updatedProduct.id = products[productIndex].id; // Asegurar que el ID no cambie
+        updatedProduct.id = products[productIndex].id;
         products[productIndex] = updatedProduct;
         writeProducts(products);
         res.json(updatedProduct);
@@ -86,7 +81,6 @@ router.put('/:pid', (req, res) => {
     }
 });
 
-// Eliminar un producto por ID
 router.delete('/:pid', (req, res) => {
     const products = readProducts();
     const productId = parseInt(req.params.pid);

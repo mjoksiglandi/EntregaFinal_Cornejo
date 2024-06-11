@@ -5,24 +5,24 @@ const router = express.Router();
 
 const cartsFilePath = path.join(__dirname, '../data/carrito.json');
 
-// Leer carritos del archivo
+
 const readCarts = () => {
     const data = fs.readFileSync(cartsFilePath, 'utf-8');
     return JSON.parse(data);
 };
 
-// Escribir carritos en el archivo
+
 const writeCarts = (carts) => {
     fs.writeFileSync(cartsFilePath, JSON.stringify(carts, null, 2));
 };
 
-// Obtener todos los carritos
+
 router.get('/', (req, res) => {
     const carts = readCarts();
     res.json(carts);
 });
 
-// Obtener un carrito por ID y listar sus productos
+
 router.get('/:cid', (req, res) => {
     const carts = readCarts();
     const cartId = parseInt(req.params.cid);
@@ -35,7 +35,7 @@ router.get('/:cid', (req, res) => {
     }
 });
 
-// Crear un nuevo carrito
+
 router.post('/', (req, res) => {
     const carts = readCarts();
     const newCart = {
@@ -48,7 +48,7 @@ router.post('/', (req, res) => {
     res.status(201).json(newCart);
 });
 
-// Agregar un producto a un carrito por ID de carrito
+
 router.post('/:cid/product/:pid', (req, res) => {
     const carts = readCarts();
     const cartId = parseInt(req.params.cid);
@@ -58,10 +58,10 @@ router.post('/:cid/product/:pid', (req, res) => {
     if (cart) {
         const productIndex = cart.products.findIndex(p => p.product === productId);
         if (productIndex !== -1) {
-            // Producto ya existe en el carrito, incrementar cantidad
+      
             cart.products[productIndex].quantity += 1;
         } else {
-            // Producto no existe en el carrito, agregar nuevo
+         
             cart.products.push({ product: productId, quantity: 1 });
         }
         writeCarts(carts);
@@ -71,7 +71,6 @@ router.post('/:cid/product/:pid', (req, res) => {
     }
 });
 
-// Eliminar un carrito por ID
 router.delete('/:cid', (req, res) => {
     const carts = readCarts();
     const cartId = parseInt(req.params.cid);
