@@ -144,5 +144,19 @@
       "data/img/tv1.png",
       "data/img/tv2.png"
     ]
+  },
+  {
+    "id": 12,
+    "title": "Televisor3",
+    "description": "Televisor LED de 55 pulgadas",
+    "code": "TV123",
+    "price": 800,
+    "status": true,
+    "stock": 10,
+    "category": "Electronics",
+    "thumbnails": [
+      "data/img/tv1.png",
+      "data/img/tv2.png"
+    ]
   }
 ]
