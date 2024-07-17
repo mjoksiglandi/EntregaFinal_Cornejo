@@ -1,79 +1,50 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const Cart = require('../models/Cart');
+const Product = require('../models/Product');
 const router = express.Router();
 
-const cartsFilePath = path.join(__dirname, '../data/carrito.json');
-
-const readCarts = () => {
-    const data = fs.readFileSync(cartsFilePath, 'utf-8');
-    return JSON.parse(data);
-};
-
-const writeCarts = (carts) => {
-    fs.writeFileSync(cartsFilePath, JSON.stringify(carts, null, 2));
-};
-
-router.get('/', (req, res) => {
-    const carts = readCarts();
+router.get('/', async (req, res) => {
+    const carts = await Cart.find().populate('products.product');
     res.json(carts);
 });
 
-router.get('/:cid', (req, res) => {
-    const carts = readCarts();
-    const cartId = parseInt(req.params.cid);
-    let cart = carts.find(c => c.id === cartId);
-
-    if (!cart) {
-        cart = { id: cartId, products: [] };
-        carts.push(cart);
-        writeCarts(carts);
-    }
-
-    res.json(cart.products);
-});
-
-router.post('/', (req, res) => {
-    const carts = readCarts();
-    const newCart = {
-        id: carts.length > 0 ? carts[carts.length - 1].id + 1 : 1,
-        products: []
-    };
-
-    carts.push(newCart);
-    writeCarts(carts);
-    res.status(201).json(newCart);
-});
-
-router.post('/:cid/product/:pid', (req, res) => {
-    const carts = readCarts();
-    const cartId = parseInt(req.params.cid);
-    const productId = parseInt(req.params.pid);
-    const cart = carts.find(c => c.id === cartId);
-
+router.get('/:cid', async (req, res) => {
+    const cart = await Cart.findById(req.params.cid).populate('products.product');
     if (cart) {
-        const productIndex = cart.products.findIndex(p => p.product === productId);
-        if (productIndex !== -1) {
-            cart.products[productIndex].quantity += 1;
-        } else {
-            cart.products.push({ product: productId, quantity: 1 });
-        }
-        writeCarts(carts);
-        res.status(201).json(cart);
+        res.json(cart.products);
     } else {
         res.status(404).send('Cart not found');
     }
 });
 
-router.delete('/:cid', (req, res) => {
-    const carts = readCarts();
-    const cartId = parseInt(req.params.cid);
-    const cartIndex = carts.findIndex(c => c.id === cartId);
+router.post('/', async (req, res) => {
+    const newCart = new Cart();
+    await newCart.save();
+    res.status(201).json(newCart);
+});
 
-    if (cartIndex !== -1) {
-        const deletedCart = carts.splice(cartIndex, 1);
-        writeCarts(carts);
-        res.json(deletedCart);
+router.post('/:cid/product/:pid', async (req, res) => {
+    const cart = await Cart.findById(req.params.cid);
+    const product = await Product.findById(req.params.pid);
+
+    if (cart && product) {
+        const productIndex = cart.products.findIndex(p => p.product.equals(req.params.pid));
+        if (productIndex !== -1) {
+            cart.products[productIndex].quantity += 1;
+        } else {
+            cart.products.push({ product: req.params.pid, quantity: 1 });
+        }
+        await cart.save();
+        res.status(201).json(cart);
+    } else {
+        res.status(404).send('Cart or product not found');
+    }
+});
+
+router.delete('/:cid', async (req, res) => {
+    const cart = await Cart.findByIdAndDelete(req.params.cid);
+    if (cart) {
+        res.json(cart);
     } else {
         res.status(404).send('Cart not found');
     }

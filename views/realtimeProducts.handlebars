@@ -1,82 +1,129 @@
+<!-- views/realTimeProducts.handlebars -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{title}}</title>
-    <link rel="stylesheet" href="/styles.css">
-    <script src="/socket.io/socket.io.js"></script>
+    <title>Productos en Tiempo Real</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
-    <h1>{{title}}</h1>
-    <div id="products-list">
-    </div>
+    <h1>Productos en Tiempo Real</h1>
+    <ul id="productList"></ul>
 
-    <h2>Agregar Producto</h2>
-    <form id="add-product-form">
-        <input type="text" id="title" name="title" placeholder="Título" required>
-        <input type="text" id="description" name="description" placeholder="Descripción" required>
-        <input type="text" id="code" name="code" placeholder="Código" required>
-        <input type="number" id="price" name="price" placeholder="Precio" required>
-        <input type="checkbox" id="status" name="status" checked> Disponible
-        <input type="number" id="stock" name="stock" placeholder="Stock" required>
-        <input type="text" id="category" name="category" placeholder="Categoría" required>
-        <input type="text" id="thumbnails" name="thumbnails" placeholder="Thumbnails (separadas por comas)">
-        <button type="submit">Agregar Producto</button>
+    <form id="productForm">
+        <input type="text" name="title" placeholder="Title" required>
+        <input type="text" name="description" placeholder="Description" required>
+        <input type="text" name="code" placeholder="Code" required>
+        <input type="number" name="price" placeholder="Price" required>
+        <input type="number" name="stock" placeholder="Stock" required>
+        <input type="text" name="category" placeholder="Category" required>
+        <input type="text" name="thumbnails" placeholder="Thumbnails (comma separated)">
+        <button type="submit">Add Product</button>
     </form>
 
-    <h2>Eliminar Producto</h2>
-    <form id="delete-product-form">
-        <input type="number" id="delete-id" name="delete-id" placeholder="ID del Producto" required>
-        <button type="submit">Eliminar Producto</button>
-    </form>
+    <button id="registerBtn">Register</button>
+    <button id="loginBtn">Login</button>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
 
+        // Actualizar la lista de productos en tiempo real
         socket.on('products', (products) => {
-            const productsList = document.getElementById('products-list');
-            productsList.innerHTML = '';
+            const productList = document.getElementById('productList');
+            productList.innerHTML = '';
             products.forEach(product => {
-                const productItem = document.createElement('div');
-                productItem.innerHTML = `
-                    <h2>${product.title}</h2>
-                    <p>ID:${product.id}</p>
-                    <p>${product.description}</p>
-                    <p>Code: ${product.code}</p>
-                    <p>Price: $${product.price}</p>
-                    <p>Status: ${product.status ? 'Available' : 'Not Available'}</p>
-                    <p>Stock: ${product.stock}</p>
-                    <p>Category: ${product.category}</p>
-                    <p>Thumbnails: ${product.thumbnails.join(', ')}</p>
-                `;
-                productsList.appendChild(productItem);
+                const productItem = document.createElement('li');
+                productItem.textContent = `ID: ${product._id}, Title: ${product.title}`;
+                productList.appendChild(productItem);
             });
         });
 
-        const addProductForm = document.getElementById('add-product-form');
-        addProductForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const newProduct = {
-                title: e.target.title.value,
-                description: e.target.description.value,
-                code: e.target.code.value,
-                price: e.target.price.value,
-                status: e.target.status.checked,
-                stock: e.target.stock.value,
-                category: e.target.category.value,
-                thumbnails: e.target.thumbnails.value.split(','),
-            };
-            socket.emit('newProduct', newProduct);
-            e.target.reset();
+        // Manejar el envío del formulario
+        document.getElementById('productForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const productData = {};
+            formData.forEach((value, key) => {
+                productData[key] = value;
+            });
+
+            // Enviar el producto al servidor
+            const response = await fetch('/api/products', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(productData)
+            });
+
+            if (response.ok) {
+                event.target.reset();
+            } else {
+                console.error('Failed to add product');
+            }
         });
 
-        const deleteProductForm = document.getElementById('delete-product-form');
-        deleteProductForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const productId = e.target['delete-id'].value;
-            socket.emit('deleteProduct', productId);
-            e.target.reset();
+        document.getElementById('registerBtn').addEventListener('click', () => {
+            Swal.fire({
+                title: 'Register',
+                html:
+                    '<input id="swal-username" class="swal2-input" placeholder="Username">' +
+                    '<input id="swal-password" type="password" class="swal2-input" placeholder="Password">',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const username = document.getElementById('swal-username').value;
+                    const password = document.getElementById('swal-password').value;
+                    return { username, password };
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const response = await fetch('/auth/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(result.value)
+                    });
+
+                    if (response.ok) {
+                        Swal.fire('Registered!', 'Your account has been created.', 'success');
+                    } else {
+                        Swal.fire('Error', 'Failed to register', 'error');
+                    }
+                }
+            });
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            Swal.fire({
+                title: 'Login',
+                html:
+                    '<input id="swal-username" class="swal2-input" placeholder="Username">' +
+                    '<input id="swal-password" type="password" class="swal2-input" placeholder="Password">',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const username = document.getElementById('swal-username').value;
+                    const password = document.getElementById('swal-password').value;
+                    return { username, password };
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const response = await fetch('/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(result.value)
+                    });
+
+                    if (response.ok) {
+                        Swal.fire('Logged in!', 'You are now logged in.', 'success');
+                    } else {
+                        Swal.fire('Error', 'Invalid username or password', 'error');
+                    }
+                }
+            });
         });
     </script>
 </body>
