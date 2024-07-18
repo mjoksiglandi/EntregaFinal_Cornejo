@@ -1,41 +1,79 @@
-<!-- views/realTimeProducts.handlebars -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Productos en Tiempo Real</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
-    <h1>Productos en Tiempo Real</h1>
-    <ul id="productList"></ul>
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <h1>Productos en Tiempo Real</h1>
+            <div>
+                <button class="btn btn-primary" onclick="viewCart()">
+                    <i class="fas fa-shopping-cart"></i> Ver Carrito
+                </button>
+            </div>
+        </div>
+        <div class="row" id="productList"></div>
 
-    <form id="productForm">
-        <input type="text" name="title" placeholder="Title" required>
-        <input type="text" name="description" placeholder="Description" required>
-        <input type="text" name="code" placeholder="Code" required>
-        <input type="number" name="price" placeholder="Price" required>
-        <input type="number" name="stock" placeholder="Stock" required>
-        <input type="text" name="category" placeholder="Category" required>
-        <input type="text" name="thumbnails" placeholder="Thumbnails (comma separated)">
-        <button type="submit">Add Product</button>
-    </form>
+        <form id="productForm" class="mt-4">
+            <div class="form-group">
+                <input type="text" name="title" placeholder="Title" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <input type="text" name="description" placeholder="Description" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <input type="text" name="code" placeholder="Code" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <input type="number" name="price" placeholder="Price" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <input type="number" name="stock" placeholder="Stock" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <input type="text" name="category" placeholder="Category" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <input type="text" name="thumbnails" placeholder="Thumbnails (comma separated)" class="form-control">
+            </div>
+            <div class="form-group form-check">
+                <input type="checkbox" name="status" class="form-check-input">
+                <label class="form-check-label">Status</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Product</button>
+        </form>
+    </div>
 
-    <button id="registerBtn">Register</button>
-    <button id="loginBtn">Login</button>
-
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+        const userId = `user-${Math.floor(Math.random() * 10000)}`; // Generar un ID de usuario único
 
         // Actualizar la lista de productos en tiempo real
         socket.on('products', (products) => {
             const productList = document.getElementById('productList');
             productList.innerHTML = '';
             products.forEach(product => {
-                const productItem = document.createElement('li');
-                productItem.textContent = `ID: ${product._id}, Title: ${product.title}`;
-                productList.appendChild(productItem);
+                const productCard = document.createElement('div');
+                productCard.className = 'col-md-4';
+                productCard.innerHTML = `
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">${product.title}</h5>
+                            <p class="card-text">ID: ${product._id}</p>
+                            <p class="card-text">Descripción: ${product.description}</p>
+                            <p class="card-text">Stock: ${product.stock}</p>
+                            <p class="card-text">Precio: ${product.price}</p>
+                            <button class="btn btn-primary" onclick="addToCart('${product._id}')">Add to Cart</button>
+                        </div>
+                    </div>
+                `;
+                productList.appendChild(productCard);
             });
         });
 
@@ -59,72 +97,52 @@
 
             if (response.ok) {
                 event.target.reset();
+                socket.emit('getProducts');
             } else {
-                console.error('Failed to add product');
+                Swal.fire('Error', 'Failed to add product', 'error');
             }
         });
 
-        document.getElementById('registerBtn').addEventListener('click', () => {
-            Swal.fire({
-                title: 'Register',
-                html:
-                    '<input id="swal-username" class="swal2-input" placeholder="Username">' +
-                    '<input id="swal-password" type="password" class="swal2-input" placeholder="Password">',
-                focusConfirm: false,
-                preConfirm: () => {
-                    const username = document.getElementById('swal-username').value;
-                    const password = document.getElementById('swal-password').value;
-                    return { username, password };
-                }
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    const response = await fetch('/auth/register', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(result.value)
-                    });
-
-                    if (response.ok) {
-                        Swal.fire('Registered!', 'Your account has been created.', 'success');
-                    } else {
-                        Swal.fire('Error', 'Failed to register', 'error');
-                    }
+        // Agregar producto al carrito
+        async function addToCart(productId) {
+            const response = await fetch(`/api/carts/add/${productId}`, {
+                method: 'POST',
+                headers: {
+                    'x-user-id': userId
                 }
             });
-        });
 
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            Swal.fire({
-                title: 'Login',
-                html:
-                    '<input id="swal-username" class="swal2-input" placeholder="Username">' +
-                    '<input id="swal-password" type="password" class="swal2-input" placeholder="Password">',
-                focusConfirm: false,
-                preConfirm: () => {
-                    const username = document.getElementById('swal-username').value;
-                    const password = document.getElementById('swal-password').value;
-                    return { username, password };
-                }
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    const response = await fetch('/auth/login', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(result.value)
-                    });
+            if (!response.ok) {
+                Swal.fire('Error', 'Failed to add product to cart', 'error');
+            } else {
+                Swal.fire('Éxito', 'Producto añadido al carrito', 'success');
+            }
+        }
 
-                    if (response.ok) {
-                        Swal.fire('Logged in!', 'You are now logged in.', 'success');
-                    } else {
-                        Swal.fire('Error', 'Invalid username or password', 'error');
-                    }
+        // Ver el carrito
+        async function viewCart() {
+            const response = await fetch('/api/carts', {
+                headers: {
+                    'x-user-id': userId
                 }
             });
-        });
+            const cart = await response.json();
+
+            let cartHtml = '<ul class="list-group">';
+            cart.products.forEach(item => {
+                cartHtml += `<li class="list-group-item">Producto: ${item.product.title} - Cantidad: ${item.quantity}</li>`;
+            });
+            cartHtml += '</ul>';
+
+            Swal.fire({
+                title: 'Carrito de Compras',
+                html: cartHtml,
+                showCloseButton: true
+            });
+        }
+
+        // Solicitar productos iniciales
+        socket.emit('getProducts');
     </script>
 </body>
 </html>

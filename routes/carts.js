@@ -3,50 +3,49 @@ const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 const router = express.Router();
 
+// Obtener el carrito
 router.get('/', async (req, res) => {
-    const carts = await Cart.find().populate('products.product');
-    res.json(carts);
-});
-
-router.get('/:cid', async (req, res) => {
-    const cart = await Cart.findById(req.params.cid).populate('products.product');
-    if (cart) {
-        res.json(cart.products);
-    } else {
-        res.status(404).send('Cart not found');
-    }
-});
-
-router.post('/', async (req, res) => {
-    const newCart = new Cart();
-    await newCart.save();
-    res.status(201).json(newCart);
-});
-
-router.post('/:cid/product/:pid', async (req, res) => {
-    const cart = await Cart.findById(req.params.cid);
-    const product = await Product.findById(req.params.pid);
-
-    if (cart && product) {
-        const productIndex = cart.products.findIndex(p => p.product.equals(req.params.pid));
-        if (productIndex !== -1) {
-            cart.products[productIndex].quantity += 1;
-        } else {
-            cart.products.push({ product: req.params.pid, quantity: 1 });
+    try {
+        const userId = req.headers['x-user-id'];
+        let cart = await Cart.findOne({ userId }).populate('products.product');
+        if (!cart) {
+            cart = new Cart({ userId, products: [] });
+            await cart.save();
         }
-        await cart.save();
-        res.status(201).json(cart);
-    } else {
-        res.status(404).send('Cart or product not found');
+        res.json(cart);
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener el carrito' });
     }
 });
 
-router.delete('/:cid', async (req, res) => {
-    const cart = await Cart.findByIdAndDelete(req.params.cid);
-    if (cart) {
-        res.json(cart);
-    } else {
-        res.status(404).send('Cart not found');
+// Agregar producto al carrito
+router.post('/add/:productId', async (req, res) => {
+    const productId = req.params.productId;
+    const userId = req.headers['x-user-id'];
+
+    try {
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({ message: 'Producto no encontrado' });
+        }
+
+        let cart = await Cart.findOne({ userId });
+        if (!cart) {
+            cart = new Cart({ userId, products: [] });
+        }
+
+        const existingProductIndex = cart.products.findIndex(p => p.product.toString() === productId);
+        if (existingProductIndex !== -1) {
+            cart.products[existingProductIndex].quantity += 1;
+        } else {
+            cart.products.push({ product: productId, quantity: 1 });
+        }
+
+        await cart.save();
+        res.status(200).json(cart);
+    } catch (error) {
+        console.error('Error al agregar producto al carrito:', error);
+        res.status(500).json({ message: 'Error al agregar producto al carrito' });
     }
 });
 

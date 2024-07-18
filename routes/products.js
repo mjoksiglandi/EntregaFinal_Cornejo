@@ -1,12 +1,8 @@
-// routes/products.js
-
 const express = require('express');
 const Product = require('../models/Product');
+const router = express.Router();
 
 module.exports = (io) => {
-    const router = express.Router();
-
-    // Obtener todos los productos
     router.get('/', async (req, res) => {
         try {
             const products = await Product.find();
@@ -16,28 +12,22 @@ module.exports = (io) => {
         }
     });
 
-    // Agregar un nuevo producto
     router.post('/', async (req, res) => {
         try {
-            const newProduct = new Product(req.body);
-            await newProduct.save();
-            io.emit('newProduct', newProduct); // Emitir evento a través de Socket.IO
-            res.status(201).json(newProduct);
+            const product = new Product(req.body);
+            await product.save();
+            io.emit('products', await Product.find());
+            res.status(201).json(product);
         } catch (error) {
-            res.status(500).json({ message: 'Error al agregar producto' });
+            res.status(500).json({ message: 'Error al crear producto' });
         }
     });
 
-    // Eliminar un producto por ID
-    router.delete('/:id', async (req, res) => {
+    router.delete('/:productId', async (req, res) => {
         try {
-            const deletedProduct = await Product.findByIdAndDelete(req.params.id);
-            if (deletedProduct) {
-                io.emit('deleteProduct', req.params.id); // Emitir evento a través de Socket.IO
-                res.json(deletedProduct);
-            } else {
-                res.status(404).json({ message: 'Producto no encontrado' });
-            }
+            await Product.findByIdAndDelete(req.params.productId);
+            io.emit('products', await Product.find());
+            res.status(200).json({ message: 'Producto eliminado' });
         } catch (error) {
             res.status(500).json({ message: 'Error al eliminar producto' });
         }

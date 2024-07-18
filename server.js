@@ -6,10 +6,6 @@ const socketIO = require('socket.io');
 const mongoose = require('mongoose');
 const Product = require('./models/Product');
 const Cart = require('./models/Cart');
-const User = require('./models/User');
-const productsRouter = require('./routes/products');
-const cartsRouter = require('./routes/carts');
-const authRouter = require('./routes/auth');
 
 const app = express();
 const server = http.createServer(app);
@@ -18,8 +14,7 @@ const PORT = 8080;
 
 // Conectar a MongoDB
 mongoose.connect('mongodb://localhost:27017/TestBackend', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
+    useNewUrlParser: true
 }).then(() => console.log('MongoDB conectado'))
   .catch(err => console.error('Error conectando a MongoDB', err));
 
@@ -47,43 +42,29 @@ app.get('/realtimeproducts', (req, res) => {
 });
 
 // Rutas
-app.use('/api/products', productsRouter(io));
+const productsRouter = require('./routes/products');
+const cartsRouter = require('./routes/carts');
+app.use('/api/products', productsRouter);
 app.use('/api/carts', cartsRouter);
-app.use('/auth', authRouter);
 
 // Escuchar las conexiones de Socket.IO
 io.on('connection', (socket) => {
     console.log('Nuevo cliente conectado');
 
+    socket.emit('getProducts');
+
     socket.on('getProducts', async () => {
-        try {
-            const products = await Product.find();
-            socket.emit('products', products);
-        } catch (error) {
-            console.error('Error obteniendo productos:', error);
-        }
+        const products = await Product.find();
+        socket.emit('products', products);
     });
 
     socket.on('newProduct', async (productData) => {
-        try {
-            if (typeof productData.status === 'string') {
-                productData.status = productData.status === 'on';
-            }
-            const newProduct = new Product(productData);
-            await newProduct.save();
-            io.emit('products', await Product.find());
-        } catch (error) {
-            console.error('Error agregando nuevo producto:', error);
+        if (typeof productData.status === 'string') {
+            productData.status = productData.status === 'on';
         }
-    });
-
-    socket.on('deleteProduct', async (productId) => {
-        try {
-            await Product.findByIdAndDelete(productId);
-            io.emit('products', await Product.find());
-        } catch (error) {
-            console.error('Error eliminando producto:', error);
-        }
+        const newProduct = new Product(productData);
+        await newProduct.save();
+        io.emit('products', await Product.find());
     });
 
     socket.on('disconnect', () => {

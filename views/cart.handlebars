@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Carrito de Compras</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Carrito de Compras</h1>
+        <div id="cartItems">
+            {{#each products}}
+            <div class="card mb-2">
+                <div class="card-body">
+                    <h5 class="card-title">{{this.product.title}}</h5>
+                    <p class="card-text">Cantidad: {{this.quantity}}</p>
+                </div>
+            </div>
+            {{/each}}
+        </div>
+    </div>
+
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on('updateCart', (cart) => {
+            const cartItems = document.getElementById('cartItems');
+            cartItems.innerHTML = '';
+            cart.products.forEach(item => {
+                cartItems.innerHTML += `<div class="card mb-2">
+                    <div class="card-body">
+                        <h5 class="card-title">${item.product.title}</h5>
+                        <p class="card-text">Cantidad: ${item.quantity}</p>
+                    </div>
+                </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
