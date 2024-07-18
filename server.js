@@ -14,7 +14,8 @@ const PORT = 8080;
 
 // Conectar a MongoDB
 mongoose.connect('mongodb://localhost:27017/TestBackend', {
-    useNewUrlParser: true
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 }).then(() => console.log('MongoDB conectado'))
   .catch(err => console.error('Error conectando a MongoDB', err));
 
@@ -51,10 +52,10 @@ app.use('/api/carts', cartsRouter);
 io.on('connection', (socket) => {
     console.log('Nuevo cliente conectado');
 
-    socket.emit('getProducts');
-
-    socket.on('getProducts', async () => {
-        const products = await Product.find();
+    socket.on('getProducts', async (options = {}) => {
+        const { sort } = options;
+        const sortOption = sort === 'asc' ? { price: 1 } : sort === 'desc' ? { price: -1 } : {};
+        const products = await Product.find().sort(sortOption);
         socket.emit('products', products);
     });
 
@@ -64,6 +65,11 @@ io.on('connection', (socket) => {
         }
         const newProduct = new Product(productData);
         await newProduct.save();
+        io.emit('products', await Product.find());
+    });
+
+    socket.on('deleteProduct', async (productId) => {
+        await Product.findByIdAndDelete(productId);
         io.emit('products', await Product.find());
     });
 
